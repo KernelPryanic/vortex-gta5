@@ -1,4 +1,4 @@
-# AGENTS.md — vortex-gta5-support
+# AGENTS.md — vortex-gta5
 
 A Vortex (Nexus Mods) game extension for GTA V, written in TypeScript and
 bundled with webpack. These conventions adapt the Go AGENTS.md from the MASS

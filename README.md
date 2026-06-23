@@ -42,7 +42,7 @@ Uses `make` (mirrors the conventions in `/d/workspace/mass`):
 make install      # npm install --legacy-peer-deps
 make lint         # TypeScript type-check (tsc --noEmit)
 make build        # compile to dist/ (index.js + assets)
-make package      # build + produce vortex-gta5-support-<version>.zip
+make package      # build + produce vortex-gta5-<version>.zip
 make package-7z   # same, but a .7z instead
 make clean        # remove dist/ and archives
 make help         # list all targets
@@ -57,7 +57,7 @@ Vortex's extension installer expects.
 **Extensions → "Drop File(s)"** and drop the generated `.zip`. Restart Vortex.
 
 **Manual / dev:** copy the contents of `dist/` into
-`%APPDATA%\Vortex\plugins\vortex-gta5-support\` and restart Vortex.
+`%APPDATA%\Vortex\plugins\vortex-gta5\` and restart Vortex.
 
 ## How the structure-preserving install works
 
