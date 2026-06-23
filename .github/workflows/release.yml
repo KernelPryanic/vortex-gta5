@@ -33,14 +33,17 @@ jobs:
         # the extension, so skip their node-gyp build with --ignore-scripts.
         run: npm install --legacy-peer-deps --ignore-scripts
 
+      # Build steps go through the Makefile so it stays the single source of
+      # truth (install is the exception — CI needs --ignore-scripts above).
+      # `make package` builds first, so no separate build step is needed.
       - name: Lint (type-check)
-        run: npm run typecheck
+        run: make lint
 
       - name: Test
-        run: npm test
+        run: make test
 
       - name: Package
-        run: npm run package
+        run: make package
 
       - name: Create release
         uses: softprops/action-gh-release@v2

@@ -27,11 +27,13 @@ jobs:
         # the C++ toolchain on the runner anyway.
         run: npm install --legacy-peer-deps --ignore-scripts
 
+      # Build steps go through the Makefile so it stays the single source of
+      # truth (install is the exception — CI needs --ignore-scripts above).
       - name: Lint (type-check)
-        run: npm run typecheck
+        run: make lint
 
       - name: Test
-        run: npm test
+        run: make test
 
       - name: Build
-        run: npm run build
+        run: make build
