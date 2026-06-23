@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.test-build/
+*.7z
+*.zip
+*.log
+yarn-error.log
+.DS_Store

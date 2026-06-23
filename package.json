@@ -1,0 +1,30 @@
+{
+  "name": "vortex-gta5-support",
+  "description": "Vortex support for Grand Theft Auto V that preserves mod archive folder structure on install",
+  "version": "0.1.0",
+  "author": "Kernel Pryanic",
+  "license": "GPL-3.0",
+  "private": true,
+  "scripts": {
+    "webpack": "webpack --config webpack.config.js --color",
+    "copy_assets": "copyfiles -f assets/* dist",
+    "build": "npm run webpack && npm run copy_assets",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\"",
+    "package": "node scripts/package.js",
+    "package:7z": "node scripts/package.js --7z"
+  },
+  "devDependencies": {
+    "@types/bluebird": "3.5.20",
+    "@types/node": "^18.19.0",
+    "bluebird": "^3.7.2",
+    "copyfiles": "^2.4.1",
+    "ts-loader": "^9.5.1",
+    "turbowalk": "Nexus-Mods/node-turbowalk",
+    "typescript": "^4.9.5",
+    "vortex-api": "Nexus-Mods/vortex-api",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4",
+    "winapi-bindings": "Nexus-Mods/node-winapi-bindings"
+  }
+}
