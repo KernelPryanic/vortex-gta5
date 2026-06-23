@@ -10,7 +10,7 @@
     "copy_assets": "copyfiles -f assets/* dist",
     "build": "npm run webpack && npm run copy_assets",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\"",
+    "test": "tsc -p tsconfig.test.json && node scripts/run-tests.js",
     "package": "node scripts/package.js",
     "package:7z": "node scripts/package.js --7z"
   },
