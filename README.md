@@ -29,6 +29,10 @@ If a mod archive contains `scripts/some.dll`, it is installed exactly as
   `update/x64/dlcpacks/<name>/`.
 - **OpenIV `.oiv` packages** detected, saved to staging, and the user is guided
   to apply them through OpenIV (they can't be deployed as loose files).
+- **RPF-replacement mods** — loose game assets (`.ymt`, `.ytd`, ...) meant to be
+  injected into a packed `.rpf` (e.g. replacing `landing_page_deck.ymt` inside
+  `update.rpf`). Vortex can't edit `.rpf` archives, so these are staged and the
+  user is guided to apply them with OpenIV / CodeWalker.
 
 ## Build & package
 

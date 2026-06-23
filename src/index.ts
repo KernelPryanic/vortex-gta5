@@ -9,6 +9,7 @@ import {
   GAME_ID,
   KNOWN_ROOT_DIRS,
   OPENIV_URL,
+  RPF_ASSET_EXTS,
   STEAM_APP_ID,
   basenameLower,
   copyInstructions,
@@ -16,6 +17,7 @@ import {
   hasExt,
   isIgnoredFile,
   isOIVInstalled,
+  isRPFReplacement,
   openIVPath,
   toUnix,
 } from './util';
@@ -208,6 +210,76 @@ function installOIV(files: string[]): Bluebird<InstallResult> {
 }
 
 // ---------------------------------------------------------------------------
+// RPF-replacement installer (loose game assets injected into a packed .rpf)
+// ---------------------------------------------------------------------------
+
+function testRPF(files: string[], gameId: string): Bluebird<types.ISupportedResult> {
+  return Bluebird.resolve({
+    supported: (gameId === GAME_ID) && isRPFReplacement(files),
+    requiredFiles: [],
+  });
+}
+
+function notifyRPF(files: string[]): void {
+  const api = gApi;
+  if (api === undefined
+      || api.sendNotification === undefined
+      || api.showDialog === undefined) {
+    return;
+  }
+  const sendNotification = api.sendNotification;
+  const showDialog = api.showDialog;
+  const asset = dataFiles(files)
+    .find(file => RPF_ASSET_EXTS.has(path.extname(file).toLowerCase()));
+
+  sendNotification({
+    type: 'info',
+    id: 'gta5-rpf-replacement',
+    title: 'RPF replacement mod detected',
+    message: asset !== undefined ? path.basename(asset) : 'This mod replaces a file inside a .rpf',
+    noDismiss: true,
+    actions: [
+      {
+        title: 'Get OpenIV',
+        action: () => { util.opn(OPENIV_URL).catch(() => undefined); },
+      },
+      {
+        title: 'More',
+        action: (dismiss: () => void) => {
+          showDialog('info', 'RPF replacement mod', {
+            text: 'This mod replaces game assets that live INSIDE a packed .rpf archive '
+              + '(such as update.rpf). Vortex cannot edit .rpf contents, so the file(s) have '
+              + 'been saved in this mod\'s staging folder instead of being deployed. To apply '
+              + 'the mod, open the target .rpf with OpenIV or CodeWalker and replace the file '
+              + 'there - the mod\'s own page lists the exact path (e.g. '
+              + 'mods\\update\\update.rpf\\x64\\data\\ui). Modding a Mods-folder copy of the '
+              + '.rpf (via OpenRPF/OpenIV) keeps the base game files intact.',
+          }, [{ label: 'Close', action: () => dismiss() }]);
+        },
+      },
+    ],
+  });
+}
+
+function installRPF(files: string[]): Bluebird<InstallResult> {
+  // Loose RPF assets cannot be deployed - they must be injected into a .rpf by
+  // OpenIV/CodeWalker. We stage the files (so the user has them on hand), tag a
+  // passive mod type so Vortex does not deploy them to the game root, and guide
+  // the user on how to apply them.
+  const data = dataFiles(files);
+  const instructions: Instruction[] = data.map(source => ({
+    type: 'copy',
+    source,
+    destination: toUnix(source).split('/').join(path.sep),
+  } as Instruction));
+  instructions.push({ type: 'setmodtype', value: 'gta5rpf' } as Instruction);
+
+  notifyRPF(files);
+
+  return Bluebird.resolve({ instructions });
+}
+
+// ---------------------------------------------------------------------------
 // Mod type: DLC add-on packs
 // ---------------------------------------------------------------------------
 
@@ -332,8 +404,18 @@ function main(context: types.IExtensionContext): boolean {
     () => Bluebird.resolve(false),
     { mergeMods: true });
 
+  // Passive type for RPF-replacement mods (assigned explicitly via setmodtype).
+  context.registerModType(
+    'gta5rpf', 91,
+    gameId => gameId === GAME_ID,
+    getGamePath,
+    () => Bluebird.resolve(false),
+    { mergeMods: true });
+
   // Installers, highest priority first (lower number = higher priority).
   context.registerInstaller('gta5-oiv', 20, testOIV, installOIV);
+
+  context.registerInstaller('gta5-rpf', 25, testRPF, installRPF);
 
   context.registerInstaller('gta5-dlc', 30,
     (files, gameId) => Bluebird.resolve({

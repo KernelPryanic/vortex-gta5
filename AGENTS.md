@@ -62,8 +62,15 @@ repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
   `api.showDialog` (see the OpenIV `.oiv` flow), not log lines they won't see.
 
 ## Installers & mod types
-- Installer priority is lowest-number-wins. Special cases (OpenIV `.oiv`, DLC)
-  register at higher priority; the structure-preserving catch-all is last.
+- Installer priority is lowest-number-wins. Special cases (OpenIV `.oiv`,
+  RPF-replacement assets, DLC) register at higher priority; the
+  structure-preserving catch-all is last.
+- Some mods can't be deployed as loose files (`.oiv` packages, loose RPF assets
+  that must be injected into a `.rpf` via OpenIV/CodeWalker). These live in
+  `index.ts` (not the pure handlers) because they need the API to notify/guide
+  the user — they stage the files, tag a passive mod type via `setmodtype`, and
+  surface a `sendNotification`/`showDialog`. Pure handlers can't notify, so this
+  guided flow stays in `index.ts`.
 - The headline contract: **preserve the archive's folder layout** under the game
   root. `scripts/some.dll` → `<GTA5>/scripts/some.dll`. Only strip a single
   mod-name wrapper folder; never flatten by default.

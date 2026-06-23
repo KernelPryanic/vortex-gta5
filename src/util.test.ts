@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { dataFiles, isIgnoredFile } from './util';
+import { dataFiles, isIgnoredFile, isRPFReplacement } from './util';
 
 // Each case: a path and whether it should be skipped at install time.
 const cases: Array<{ name: string; file: string; ignored: boolean }> = [
@@ -38,6 +38,46 @@ const cases: Array<{ name: string; file: string; ignored: boolean }> = [
 for (const c of cases) {
   test(`isIgnoredFile: ${c.name}`, () => {
     assert.equal(isIgnoredFile(c.file), c.ignored);
+  });
+}
+
+// isRPFReplacement: loose RPF assets meant for OpenIV/CodeWalker injection.
+const rpfCases: Array<{ name: string; files: string[]; expected: boolean }> = [
+  {
+    name: 'bare .ymt -> RPF replacement',
+    files: ['landing_page_deck.ymt', 'readme.txt'],
+    expected: true,
+  },
+  {
+    name: 'loose .ytd in a folder -> RPF replacement',
+    files: ['textures/vehicle_generic_smallspecmap.ytd'],
+    expected: true,
+  },
+  {
+    name: 'asset shipped with its own .rpf -> deployable, not RPF replacement',
+    files: ['dlc.rpf', 'something.ymt'],
+    expected: false,
+  },
+  {
+    name: 'asset shipped with an .asi -> deployable, not RPF replacement',
+    files: ['OpenIV.asi', 'config.ymt'],
+    expected: false,
+  },
+  {
+    name: 'asset under a mods/ overlay tree -> preserve installer deploys it',
+    files: ['mods/update/update.rpf/x64/data/ui/landing_page_deck.ymt'],
+    expected: false,
+  },
+  {
+    name: 'no RPF asset at all -> not RPF replacement',
+    files: ['scripts/Trainer.dll', 'scripts/Trainer.ini'],
+    expected: false,
+  },
+];
+
+for (const c of rpfCases) {
+  test(`isRPFReplacement: ${c.name}`, () => {
+    assert.equal(isRPFReplacement(c.files), c.expected);
   });
 }
 

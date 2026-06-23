@@ -11,6 +11,26 @@ export const DLCPACKS_PATH = path.join('update', 'x64', 'dlcpacks');
 // External resources users commonly need.
 export const OPENIV_URL = 'https://openiv.com/';
 
+// GTA5 game-asset file extensions that live INSIDE packed .rpf archives. A mod
+// shipping these loose (with no .rpf of its own) is meant to be injected into an
+// existing .rpf with OpenIV/CodeWalker - Vortex cannot edit .rpf contents, so we
+// detect this and guide the user rather than deploying loose files to no effect.
+export const RPF_ASSET_EXTS = new Set<string>([
+  '.ymt',   // metadata (e.g. landing_page_deck.ymt)
+  '.ymf',   // manifest
+  '.ymap',  // map placement
+  '.ytyp',  // archetype definitions
+  '.ytd',   // texture dictionary
+  '.ydr',   // drawable
+  '.ydd',   // drawable dictionary
+  '.yft',   // fragment
+  '.ybn',   // collision bounds
+  '.ynd',   // path nodes
+  '.ynv',   // nav mesh
+  '.ycd',   // clip dictionary
+  '.gxt2',  // localized text table
+]);
+
 // Top-level folder names that are meaningful relative to the GTA5 root. When an
 // archive's single wrapping folder is one of these we must NOT strip it as a
 // wrapper, because doing so would destroy the path the mod author intended
@@ -114,6 +134,27 @@ export function dataFiles(files: string[]): string[] {
 export function hasExt(files: string[], ext: string): boolean {
   const lower = ext.toLowerCase();
   return files.some(file => path.extname(file).toLowerCase() === lower);
+}
+
+// True when the archive is a loose RPF-asset replacement meant to be injected
+// into an existing .rpf via OpenIV/CodeWalker (e.g. a bare landing_page_deck.ymt).
+// We exclude archives that are independently deployable - any .rpf/.asi/.dll, or
+// a `mods/` overlay tree (which the preserve installer places verbatim) - so this
+// only claims mods that have nowhere to go as loose files.
+export function isRPFReplacement(files: string[]): boolean {
+  const data = files.filter(file => !file.endsWith('/') && !file.endsWith('\\'));
+  const hasAsset = data.some(file => RPF_ASSET_EXTS.has(path.extname(file).toLowerCase()));
+  if (!hasAsset) {
+    return false;
+  }
+  const deployable = data.some(file => {
+    const ext = path.extname(file).toLowerCase();
+    if (ext === '.rpf' || ext === '.asi' || ext === '.dll') {
+      return true;
+    }
+    return toUnix(file).toLowerCase().startsWith('mods/');
+  });
+  return !deployable;
 }
 
 export function basenameLower(file: string): string {
