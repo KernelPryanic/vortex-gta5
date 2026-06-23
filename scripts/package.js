@@ -15,7 +15,9 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const distDir = path.join(root, 'dist');
 const pkg = require(path.join(root, 'package.json'));
-const baseName = `${pkg.name}-${pkg.version}`;
+// Unversioned name keeps the download URL stable across releases (Nexus "Mod
+// manager download", direct links). The version lives in assets/info.json.
+const baseName = pkg.name;
 const want7z = process.argv.includes('--7z');
 
 if (!fs.existsSync(distDir) || fs.readdirSync(distDir).length === 0) {

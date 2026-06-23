@@ -1,18 +1,16 @@
 # AGENTS.md — vortex-gta5
 
 A Vortex (Nexus Mods) game extension for GTA V, written in TypeScript and
-bundled with webpack. These conventions adapt the Go AGENTS.md from the MASS
-repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
+bundled with webpack. Conventions below apply throughout.
 
 ## Core principles
-- Best modern TypeScript practices. Simple, reusable, maintainable code;
-  maintainability and simplicity come first, optimize only where it pays off.
-- Use proper abstraction only where truly required. Abstractions belong at the
-  seams (the Vortex `IExtensionContext` boundary, installers, mod types) — not
-  mid-code. Three similar lines beat a premature helper.
+- Simple, reusable, maintainable code. Maintainability and simplicity come
+  first; optimize only where it pays off.
+- Use abstraction only where truly required — at the seams (the Vortex
+  `IExtensionContext` boundary, installers, mod types), not mid-code. Three
+  similar lines beat a premature helper.
 - Write the minimal thing first. Don't generalize for hypothetical future mods;
-  add the table/strategy when a second concrete case actually shows up
-  (e.g. `KNOWN_MODS` grew from the real ScriptHookV `bin/` case).
+  add the table/strategy when a second concrete case actually shows up.
 - Design for reversibility: keep features self-contained, don't leak concerns
   across boundaries. Ask "what would it take to delete this?" before committing.
 - Breaking changes are fine when they make the code better.
@@ -21,9 +19,9 @@ repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
 ## Project shape
 - `src/` — TypeScript source. `index.ts` is the entry point (`main(context)`);
   `util.ts` holds constants and store/OpenIV helpers. One concern per file.
+- `src/installers/` — auto-discovered custom installers (see its README).
 - `assets/` — `info.json` (extension metadata Vortex reads), `icon.png` (logo).
 - `dist/` — webpack output + copied assets; the deployable payload. Disposable.
-- Root `*.zip` / `*.7z` — the installable artifact from `make package`.
 - `scripts/` — Node build/packaging helpers (plain JS, no build step).
 
 ## Style
@@ -44,9 +42,8 @@ repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
   caller that can act), logs at the call site with context, or fails fast on an
   invariant that should never happen.
 - Don't bury a rejected Promise. The only acceptable `.catch(() => undefined)` is
-  genuinely fire-and-forget UI (e.g. `util.opn(url)` opening a link) where the
-  caller can do nothing with the failure — same narrow exemption as the parent
-  repo's "never `_ =` an error".
+  genuinely fire-and-forget UI (e.g. opening a link) where the caller can do
+  nothing with the failure.
 - Vortex's API uses **Bluebird** promises (`Promise_2` in its types). `queryPath`,
   `setup`, and `registerModType` test callbacks must return Bluebird; installers
   accept `PromiseLike`. Import `Bluebird from 'bluebird'` and return it directly
@@ -68,9 +65,9 @@ repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
 - Some mods can't be deployed as loose files (`.oiv` packages, loose RPF assets
   that must be injected into a `.rpf` via OpenIV/CodeWalker). These live in
   `index.ts` (not the pure handlers) because they need the API to notify/guide
-  the user — they stage the files, tag a passive mod type via `setmodtype`, and
-  surface a `sendNotification`/`showDialog`. Pure handlers can't notify, so this
-  guided flow stays in `index.ts`.
+  the user — they stage the files, tag a passive mod type, and surface a
+  `sendNotification`/`showDialog`. Pure handlers can't notify, so this guided
+  flow stays in `index.ts`.
 - The headline contract: **preserve the archive's folder layout** under the game
   root. `scripts/some.dll` → `<GTA5>/scripts/some.dll`. Only strip a single
   mod-name wrapper folder; never flatten by default.
@@ -79,21 +76,21 @@ repo (and its C++ translation) to this TS/JS codebase. Apply them throughout.
   self-contained `CustomInstallerInterface` (`detect` + `install`) in its own
   file under `handlers/`, auto-discovered by the registry via webpack
   `require.context`. Adding one = drop a file + a test; touch nothing shared.
-  `installPreserve` consults `resolveInstaller(files)` before the generic logic.
-- Keep handler `detect`/`install` **pure** (no fs/API) so they stay table-test-able.
+- Keep handler `detect`/`install` **pure** (no fs/API) so they stay table-testable.
   See [`src/installers/README.md`](src/installers/README.md) for the contributor flow.
 
 ## Tests
 - Logic worth testing is the pure path-mapping/detection (`detectWrapperPrefix`,
-  `installPreserve`, `isASIMod`, `isDLCMod`). Prefer table-driven cases: an array
-  of `{ name, files, expected }` run through one assertion loop.
-- Use Node's built-in `node:test` + `assert` (no extra runner needed) when a
-  suite is added; wire it into `make test`.
+  `installPreserve`, `isASIMod`, `isDLCMod`, the installer handlers). Prefer
+  table-driven cases: an array of `{ name, files, expected }` run through one
+  assertion loop.
+- Use Node's built-in `node:test` + `assert` (no extra runner needed), wired into
+  `make test`.
 
 ## Build / lint / test / package
 - `make build` — webpack compile + copy assets to `dist/`.
 - `make lint` — `tsc --noEmit` type-check.
-- `make test` — test suite (placeholder until tests exist).
+- `make test` — compile and run the `node:test` suite.
 - `make package` — build + a `.zip` for Vortex's "Drop File(s)" (`make package-7z`
   for `.7z`). The archive's files sit at its root, which Vortex expects.
 - `make install` uses `--legacy-peer-deps` (vortex-api pins an older

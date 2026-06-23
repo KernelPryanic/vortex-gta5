@@ -1,7 +1,9 @@
-# Vortex GTA 5 Support (structure-preserving)
+# Vortex extension for GTA 5
+
+[![CI](https://github.com/KernelPryanic/vortex-gta5/actions/workflows/ci.yml/badge.svg)](https://github.com/KernelPryanic/vortex-gta5/actions/workflows/ci.yml)
 
 A [Vortex](https://www.nexusmods.com/about/vortex/) game extension that adds
-**Grand Theft Auto V** modding support — like the official
+**Grand Theft Auto V** modding support — like the existing
 [GTA V extension](https://www.nexusmods.com/site/mods/62), but it **preserves the
 mod archive's folder structure** when installing.
 
@@ -36,13 +38,11 @@ If a mod archive contains `scripts/some.dll`, it is installed exactly as
 
 ## Build & package
 
-Uses `make` (mirrors the conventions in `/d/workspace/mass`):
-
 ```bash
 make install      # npm install --legacy-peer-deps
 make lint         # TypeScript type-check (tsc --noEmit)
 make build        # compile to dist/ (index.js + assets)
-make package      # build + produce vortex-gta5-<version>.zip
+make package      # build + produce vortex-gta5.zip
 make package-7z   # same, but a .7z instead
 make clean        # remove dist/ and archives
 make help         # list all targets
@@ -51,10 +51,27 @@ make help         # list all targets
 `make package` writes a `.zip` whose files sit at the archive root — the format
 Vortex's extension installer expects.
 
-## Install into Vortex
+### Releasing
 
-**Easiest:** run `make package`, then in Vortex go to
-**Extensions → "Drop File(s)"** and drop the generated `.zip`. Restart Vortex.
+Releases are automated. Bump `version` in `package.json`, then push a matching
+`v<version>` tag:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The [Release workflow](.github/workflows/release.yml) builds, tests, and attaches
+the `.zip` to a new GitHub Release. The tag must match `package.json` or it fails.
+
+## Install
+
+**From Nexus Mods (easiest):** on the mod page, hit **Mod manager download** —
+Vortex picks it up automatically — then restart Vortex.
+
+**From a `.zip`:** download `vortex-gta5.zip` from
+[Releases](https://github.com/KernelPryanic/vortex-gta5/releases) (or build one
+with `make package`), then in Vortex go to **Extensions → "Drop File(s)"**, drop
+the `.zip`, and restart Vortex.
 
 **Manual / dev:** copy the contents of `dist/` into
 `%APPDATA%\Vortex\plugins\vortex-gta5\` and restart Vortex.

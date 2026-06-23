@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "Tag v$tag does not match package.json version $pkg" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Lint (type-check)
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Package
+        run: npm run package
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vortex-gta5-*.zip
+          generate_release_notes: true

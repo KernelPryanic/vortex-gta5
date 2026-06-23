@@ -1,8 +1,8 @@
 # Vortex GTA 5 extension - build / lint / test / package
 #
-# Conventions mirror /d/workspace/mass AGENTS.md: `make lint`, `make test`,
-# `make build` are the entry points. `make package` produces the Vortex-
-# installable archive (.zip by default; `make package-7z` for .7z).
+# `make lint`, `make test`, `make build` are the entry points. `make package`
+# produces the Vortex-installable archive (.zip by default; `make package-7z`
+# for .7z).
 
 NPM := npm
 
