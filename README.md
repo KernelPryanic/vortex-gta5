@@ -51,18 +51,6 @@ make help         # list all targets
 `make package` writes a `.zip` whose files sit at the archive root — the format
 Vortex's extension installer expects.
 
-### Releasing
-
-Releases are automated. Bump `version` in `package.json`, then push a matching
-`v<version>` tag:
-
-```bash
-git tag v0.1.0 && git push origin v0.1.0
-```
-
-The [Release workflow](.github/workflows/release.yml) builds, tests, and attaches
-the `.zip` to a new GitHub Release. The tag must match `package.json` or it fails.
-
 ## Install
 
 **From Nexus Mods (easiest):** on the mod page, hit **Mod manager download** —
