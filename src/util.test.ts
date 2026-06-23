@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { dataFiles, isIgnoredFile, isRPFReplacement } from './util';
+import { dataFiles, detectWrapperPrefix, isIgnoredFile, isRPFReplacement } from './util';
 
 // Each case: a path and whether it should be skipped at install time.
 const cases: Array<{ name: string; file: string; ignored: boolean }> = [
@@ -104,3 +104,52 @@ test('dataFiles drops directory entries and noise, keeps real files', () => {
     'ScriptHookVDotNet3.dll',
   ]);
 });
+
+const wrapperCases: Array<{ name: string; files: string[]; expected: string }> = [
+  {
+    name: 'mod-name wrapper folder is stripped',
+    files: ['Cool Mod v2/scripts/x.dll', 'Cool Mod v2/readme.txt'],
+    expected: 'Cool Mod v2/',
+  },
+  {
+    name: 'known GTA root folder (scripts) is kept',
+    files: ['scripts/Trainer.dll', 'scripts/Trainer.ini'],
+    expected: '',
+  },
+  {
+    // Regression: menyooStuff is the Menyoo data dir at the game root; stripping
+    // it loses the folder and the outfits land in the wrong place.
+    name: 'menyooStuff is kept so its tree merges at the game root',
+    files: [
+      'menyooStuff/Outfit/!Female/Deadline/Blue.xml',
+      'menyooStuff/Outfit/!Male/Sumo/Black.xml',
+    ],
+    expected: '',
+  },
+  {
+    name: 'deep path under a known root is kept whole (only top level matters)',
+    files: ['scripts/addons/a/b/c/x.dll'],
+    expected: '',
+  },
+  {
+    name: 'a mod-name wrapper around a deep tree strips only the outer level',
+    files: ['Cool Mod v2/menyooStuff/Outfit/Deadline/Blue.xml'],
+    expected: 'Cool Mod v2/',
+  },
+  {
+    name: 'multiple top-level entries -> no wrapper to strip',
+    files: ['scripts/x.dll', 'menyooStuff/y.xml'],
+    expected: '',
+  },
+  {
+    name: 'a file at the archive root -> no wrapper to strip',
+    files: ['ScriptHookV.dll', 'bin/x.asi'],
+    expected: '',
+  },
+];
+
+for (const c of wrapperCases) {
+  test(`detectWrapperPrefix: ${c.name}`, () => {
+    assert.equal(detectWrapperPrefix(c.files), c.expected);
+  });
+}

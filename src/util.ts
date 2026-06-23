@@ -44,6 +44,7 @@ export const KNOWN_ROOT_DIRS = new Set<string>([
   'common',
   'data',
   'menu',
+  'menyoostuff',  // Menyoo trainer's data dir; mods drop outfits/vehicles here
   'lml',          // RDR-style loaders sometimes reused; harmless to keep
   'asiloader',
 ]);
@@ -61,6 +62,38 @@ export const ASI_LOADER_FILES = new Set<string>([
 
 export function toUnix(p: string): string {
   return p.split(path.sep).join('/');
+}
+
+/**
+ * Detect a single wrapping top-level folder that should be stripped.
+ *
+ * Many mod archives wrap their content in one folder named after the mod
+ * (e.g. `Cool Mod v2/scripts/x.dll`). We strip that so the result lands at
+ * `<GTA5>/scripts/x.dll`. But if the single top-level folder is itself a
+ * meaningful GTA root folder (`scripts`, `menyooStuff`, ...) we keep it, so the
+ * mod's files merge into that existing game folder instead of being flattened.
+ *
+ * Returns the prefix (with trailing slash) to strip, or '' for none.
+ */
+export function detectWrapperPrefix(files: string[]): string {
+  const tops = new Set<string>();
+  for (const file of files) {
+    const norm = toUnix(file);
+    const slash = norm.indexOf('/');
+    if (slash === -1) {
+      // A file sits directly at the archive root -> there is no single wrapper.
+      return '';
+    }
+    tops.add(norm.slice(0, slash));
+  }
+  if (tops.size !== 1) {
+    return '';
+  }
+  const only = Array.from(tops)[0];
+  if (KNOWN_ROOT_DIRS.has(only.toLowerCase())) {
+    return '';
+  }
+  return only + '/';
 }
 
 // ---------------------------------------------------------------------------

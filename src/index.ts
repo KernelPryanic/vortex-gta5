@@ -7,13 +7,13 @@ import {
   DLCPACKS_PATH,
   EPIC_APP_ID,
   GAME_ID,
-  KNOWN_ROOT_DIRS,
   OPENIV_URL,
   RPF_ASSET_EXTS,
   STEAM_APP_ID,
   basenameLower,
   copyInstructions,
   dataFiles,
+  detectWrapperPrefix,
   hasExt,
   isIgnoredFile,
   isOIVInstalled,
@@ -52,39 +52,6 @@ function prepareForModding(discovery: types.IDiscoveryResult): Bluebird<void> {
 
 // ---------------------------------------------------------------------------
 // Helpers (shared pure helpers live in ./util)
-// ---------------------------------------------------------------------------
-
-/**
- * Detect a single wrapping top-level folder that should be stripped.
- *
- * Many mod archives wrap their content in one folder named after the mod
- * (e.g. `Cool Mod v2/scripts/x.dll`). We strip that so the result lands at
- * `<GTA5>/scripts/x.dll`. But if the single top-level folder is itself a
- * meaningful GTA root folder (`scripts`, `update`, ...) we keep it.
- *
- * Returns the prefix (with trailing slash) to strip, or '' for none.
- */
-function detectWrapperPrefix(files: string[]): string {
-  const tops = new Set<string>();
-  for (const file of files) {
-    const norm = toUnix(file);
-    const slash = norm.indexOf('/');
-    if (slash === -1) {
-      // A file sits directly at the archive root -> there is no single wrapper.
-      return '';
-    }
-    tops.add(norm.slice(0, slash));
-  }
-  if (tops.size !== 1) {
-    return '';
-  }
-  const only = Array.from(tops)[0];
-  if (KNOWN_ROOT_DIRS.has(only.toLowerCase())) {
-    return '';
-  }
-  return only + '/';
-}
-
 // ---------------------------------------------------------------------------
 // Headline installer: preserve archive folder structure verbatim
 // ---------------------------------------------------------------------------
