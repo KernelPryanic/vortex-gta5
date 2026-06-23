@@ -1,7 +1,7 @@
 {
   "name": "vortex-gta5",
   "description": "Vortex support for Grand Theft Auto V that preserves mod archive folder structure on install",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Kernel Pryanic",
   "license": "GPL-3.0",
   "private": true,

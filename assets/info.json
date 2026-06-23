@@ -1,7 +1,7 @@
 {
   "name": "GTA V",
   "author": "Kernel Pryanic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Adds Grand Theft Auto V support to Vortex and preserves the mod archive's folder structure on install (e.g. scripts/some.dll lands at <GTA5>/scripts/some.dll).",
   "type": "game",
   "gameId": "gta5"

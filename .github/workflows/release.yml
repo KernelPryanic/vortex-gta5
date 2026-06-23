@@ -18,15 +18,13 @@ jobs:
           node-version: 18
           cache: npm
 
-      - name: Verify tag matches package.json version
+      # The tag is the source of truth for the release version. Write it into
+      # both manifests before packaging so the artifact always matches the tag —
+      # no pre-release bump commit needed. This only touches the runner's
+      # checkout, not the repo.
+      - name: Set version from tag
         shell: bash
-        run: |
-          tag="$GITHUB_REF_NAME"
-          pkg="$(node -p "require('./package.json').version")"
-          if [ "$tag" != "$pkg" ]; then
-            echo "Tag $tag does not match package.json version $pkg" >&2
-            exit 1
-          fi
+        run: node scripts/set-version.js "$GITHUB_REF_NAME"
 
       - name: Install dependencies
         # See ci.yml: native deps are webpack externals and never needed to build
