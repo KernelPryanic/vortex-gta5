@@ -29,7 +29,9 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        # See ci.yml: native deps are webpack externals and never needed to build
+        # the extension, so skip their node-gyp build with --ignore-scripts.
+        run: npm install --legacy-peer-deps --ignore-scripts
 
       - name: Lint (type-check)
         run: npm run typecheck
@@ -43,5 +45,5 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: vortex-gta5-*.zip
+          files: vortex-gta5.zip
           generate_release_notes: true

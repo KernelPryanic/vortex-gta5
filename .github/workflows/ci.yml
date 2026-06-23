@@ -20,7 +20,12 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        # --ignore-scripts skips the native build of winapi-bindings / turbowalk.
+        # They're webpack `externals` (provided by the Vortex host at runtime) and
+        # winapi-bindings is require()d lazily, so CI never needs the compiled
+        # binaries to typecheck, test, or build — and node-gyp can't reliably find
+        # the C++ toolchain on the runner anyway.
+        run: npm install --legacy-peer-deps --ignore-scripts
 
       - name: Lint (type-check)
         run: npm run typecheck
