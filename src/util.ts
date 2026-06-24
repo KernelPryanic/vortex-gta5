@@ -11,6 +11,12 @@ export const DLCPACKS_PATH = path.join('update', 'x64', 'dlcpacks');
 // External resources users commonly need.
 export const OPENIV_URL = 'https://openiv.com/';
 
+// Optional metadata file a mod can ship at its archive root to tell Vortex its
+// name/version (which local, non-Nexus mods otherwise lack, showing a blank
+// version + warning). The installer reads it, emits the matching `attribute`
+// instructions, and never deploys the file itself.
+export const MOD_META_FILE = 'gta5mod.json';
+
 // GTA5 game-asset file extensions that live INSIDE packed .rpf archives. A mod
 // shipping these loose (with no .rpf of its own) is meant to be injected into an
 // existing .rpf with OpenIV/CodeWalker - Vortex cannot edit .rpf contents, so we
@@ -146,6 +152,10 @@ export function isIgnoredFile(file: string): boolean {
     return true;
   }
   const base = segments[segments.length - 1];
+  // The mod-metadata file is read by the installer for attributes, not deployed.
+  if (base === MOD_META_FILE) {
+    return true;
+  }
   if (IGNORED_EXTS.has(path.extname(base))) {
     return true;
   }
@@ -204,6 +214,60 @@ export function copyInstructions(
     source,
     destination: dest.split('/').join(path.sep),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Mod metadata (gta5mod.json) -> Vortex attributes
+// ---------------------------------------------------------------------------
+
+// What a mod's gta5mod.json may carry. Both fields are optional; only the ones
+// present are applied, so a future field can be ignored by an older extension.
+export interface ModMeta {
+  name?: string;
+  version?: string;
+}
+
+// The archive-relative path of the metadata file, if the archive ships one.
+// Matched case-insensitively at any depth (a wrapper folder may prefix it).
+export function findModMetaPath(files: string[]): string | undefined {
+  return files.find(file => basenameLower(file) === MOD_META_FILE
+    && !file.endsWith('/') && !file.endsWith('\\'));
+}
+
+// Parse gta5mod.json content into a ModMeta. Tolerant by design: bad JSON or
+// wrong-typed fields yield an empty meta rather than throwing, so a malformed
+// file never aborts an install (the mod just keeps its blank version).
+export function parseModMeta(content: string): ModMeta {
+  let raw: any;
+  try {
+    raw = JSON.parse(content);
+  } catch (err) {
+    return {};
+  }
+  if (raw === null || typeof raw !== 'object') {
+    return {};
+  }
+  const meta: ModMeta = {};
+  if (typeof raw.name === 'string' && raw.name.trim() !== '') {
+    meta.name = raw.name.trim();
+  }
+  if (typeof raw.version === 'string' && raw.version.trim() !== '') {
+    meta.version = raw.version.trim();
+  }
+  return meta;
+}
+
+// Turn a ModMeta into the `attribute` instructions Vortex uses to fill a mod's
+// version (clearing the "no version" warning) and, when given, its display name.
+export function metaInstructions(meta: ModMeta): types.IInstruction[] {
+  const out: types.IInstruction[] = [];
+  if (meta.version !== undefined) {
+    out.push({ type: 'attribute', key: 'version', value: meta.version });
+  }
+  if (meta.name !== undefined) {
+    out.push({ type: 'attribute', key: 'customFileName', value: meta.name });
+  }
+  return out;
 }
 
 /**

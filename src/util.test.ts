@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { dataFiles, detectWrapperPrefix, isIgnoredFile, isRPFReplacement } from './util';
+import {
+  dataFiles,
+  detectWrapperPrefix,
+  findModMetaPath,
+  isIgnoredFile,
+  isRPFReplacement,
+  metaInstructions,
+  parseModMeta,
+} from './util';
 
 // Each case: a path and whether it should be skipped at install time.
 const cases: Array<{ name: string; file: string; ignored: boolean }> = [
@@ -24,6 +32,10 @@ const cases: Array<{ name: string; file: string; ignored: boolean }> = [
   { name: 'Licenses/ subtree dropped', file: 'Licenses/MIT.txt', ignored: true },
   { name: 'Debug/ build dropped', file: 'Debug/ScriptHookVDotNet2.dll', ignored: true },
   { name: '__MACOSX cruft dropped', file: '__MACOSX/._foo', ignored: true },
+
+  // Mod-metadata file is read by the installer, not deployed.
+  { name: 'gta5mod.json dropped', file: 'gta5mod.json', ignored: true },
+  { name: 'gta5mod.json in wrapper dropped', file: 'Cool Mod/gta5mod.json', ignored: true },
 
   // Real mod content survives.
   { name: 'asi kept', file: 'ScriptHookVDotNet.asi', ignored: false },
@@ -153,3 +165,57 @@ for (const c of wrapperCases) {
     assert.equal(detectWrapperPrefix(c.files), c.expected);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Mod metadata (gta5mod.json)
+// ---------------------------------------------------------------------------
+
+test('findModMetaPath: finds the meta file at the archive root', () => {
+  assert.equal(findModMetaPath(['scripts/Mod.dll', 'gta5mod.json']), 'gta5mod.json');
+});
+
+test('findModMetaPath: finds it inside a wrapper folder, case-insensitively', () => {
+  assert.equal(
+    findModMetaPath(['Cool Mod/scripts/Mod.dll', 'Cool Mod/GTA5Mod.json']),
+    'Cool Mod/GTA5Mod.json');
+});
+
+test('findModMetaPath: undefined when absent (and ignores directory entries)', () => {
+  assert.equal(findModMetaPath(['scripts/Mod.dll', 'scripts/']), undefined);
+});
+
+test('parseModMeta: reads name and version', () => {
+  assert.deepEqual(
+    parseModMeta('{"name":"Vehicle Keeper","version":"4.0.0"}'),
+    { name: 'Vehicle Keeper', version: '4.0.0' });
+});
+
+test('parseModMeta: trims and drops empty fields', () => {
+  assert.deepEqual(parseModMeta('{"name":"  ","version":" 1.2.3 "}'), { version: '1.2.3' });
+});
+
+test('parseModMeta: ignores wrong-typed fields', () => {
+  assert.deepEqual(parseModMeta('{"name":42,"version":["x"]}'), {});
+});
+
+test('parseModMeta: invalid JSON yields empty meta, never throws', () => {
+  assert.deepEqual(parseModMeta('not json'), {});
+  assert.deepEqual(parseModMeta('null'), {});
+  assert.deepEqual(parseModMeta('"a string"'), {});
+});
+
+test('metaInstructions: emits version and name attributes', () => {
+  assert.deepEqual(
+    metaInstructions({ name: 'Vehicle Keeper', version: '4.0.0' }),
+    [
+      { type: 'attribute', key: 'version', value: '4.0.0' },
+      { type: 'attribute', key: 'customFileName', value: 'Vehicle Keeper' },
+    ]);
+});
+
+test('metaInstructions: emits only what is present', () => {
+  assert.deepEqual(
+    metaInstructions({ version: '4.0.0' }),
+    [{ type: 'attribute', key: 'version', value: '4.0.0' }]);
+  assert.deepEqual(metaInstructions({}), []);
+});

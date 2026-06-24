@@ -15,16 +15,36 @@ import {
   dataFiles,
   detectWrapperPrefix,
   hasExt,
+  findModMetaPath,
   isIgnoredFile,
   isOIVInstalled,
   isRPFReplacement,
+  metaInstructions,
   openIVPath,
+  parseModMeta,
   toUnix,
 } from './util';
 import { resolveInstaller } from './installers';
 
 type InstallResult = types.IInstallResult;
 type Instruction = types.IInstruction;
+
+// Read a mod's optional gta5mod.json (already extracted under destinationPath)
+// and turn it into version/name `attribute` instructions. Best-effort: any read
+// or parse failure yields no instructions, so a missing/garbled file never
+// breaks an install (the mod just keeps its blank version).
+function metaInstructionsFor(files: string[], destinationPath: string): Bluebird<Instruction[]> {
+  const metaPath = findModMetaPath(files);
+  if (metaPath === undefined) {
+    return Bluebird.resolve([]);
+  }
+  return Bluebird.resolve(fs.readFileAsync(path.join(destinationPath, metaPath), 'utf8'))
+    .then(content => metaInstructions(parseModMeta(content)))
+    .catch(err => {
+      log('warn', 'failed to read gta5 mod metadata', { metaPath, error: err.message });
+      return [];
+    });
+}
 
 // ---------------------------------------------------------------------------
 // Game detection & setup
@@ -65,32 +85,34 @@ function testPreserve(_files: string[], gameId: string): Bluebird<types.ISupport
   });
 }
 
-function installPreserve(files: string[]): Bluebird<InstallResult> {
-  // A custom installer for a specific quirky mod takes precedence over the
-  // generic structure-preserving logic.
-  const custom = resolveInstaller(files);
-  if (custom !== undefined) {
-    log('debug', 'using custom installer', { id: custom.id });
-    return Bluebird.resolve({ instructions: custom.install(files) });
-  }
+function installPreserve(files: string[], destinationPath: string): Bluebird<InstallResult> {
+  return metaInstructionsFor(files, destinationPath).then(meta => {
+    // A custom installer for a specific quirky mod takes precedence over the
+    // generic structure-preserving logic.
+    const custom = resolveInstaller(files);
+    if (custom !== undefined) {
+      log('debug', 'using custom installer', { id: custom.id });
+      return { instructions: [...custom.install(files), ...meta] };
+    }
 
-  const data = dataFiles(files);
-  const skipped = files.filter(f => !f.endsWith('/') && !f.endsWith('\\'))
-    .filter(isIgnoredFile);
-  if (skipped.length > 0) {
-    log('debug', 'skipped install-time noise files', { files: skipped });
-  }
-  const prefix = detectWrapperPrefix(data);
+    const data = dataFiles(files);
+    const skipped = files.filter(f => !f.endsWith('/') && !f.endsWith('\\'))
+      .filter(isIgnoredFile);
+    if (skipped.length > 0) {
+      log('debug', 'skipped install-time noise files', { files: skipped });
+    }
+    const prefix = detectWrapperPrefix(data);
 
-  const instructions = copyInstructions(data.map(source => {
-    const norm = toUnix(source);
-    const rel = (prefix !== '' && norm.startsWith(prefix))
-      ? norm.slice(prefix.length)
-      : norm;
-    return { source, dest: rel };
-  }));
+    const instructions = copyInstructions(data.map(source => {
+      const norm = toUnix(source);
+      const rel = (prefix !== '' && norm.startsWith(prefix))
+        ? norm.slice(prefix.length)
+        : norm;
+      return { source, dest: rel };
+    }));
 
-  return Bluebird.resolve({ instructions });
+    return { instructions: [...instructions, ...meta] };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -256,12 +278,12 @@ function isDLCMod(files: string[]): boolean {
 
 // DLC installer: route each dlc.rpf (and its siblings) into its own named pack
 // folder under update/x64/dlcpacks, preserving any structure beneath dlc.rpf.
-function installDLC(files: string[]): Bluebird<InstallResult> {
+function installDLC(files: string[], destinationPath: string): Bluebird<InstallResult> {
   const data = dataFiles(files);
   const dlcFile = data.find(file => basenameLower(file) === 'dlc.rpf');
   if (dlcFile === undefined) {
     // Shouldn't happen (test gated); fall back to preserving structure.
-    return installPreserve(files);
+    return installPreserve(files, destinationPath);
   }
   const dlcDir = toUnix(path.dirname(dlcFile));            // folder containing dlc.rpf
   const packName = path.basename(dlcDir) || 'vortex';
